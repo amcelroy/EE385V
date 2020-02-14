@@ -4,6 +4,59 @@ classdef EEGLib
         function sample = timeToSample(time_s, fs)
             sample = time_s * fs;
         end
+        
+        function norm = minMaxNormalize(chunk)
+            norm = (chunk - min(chunk)) / (max(chunk) - min(chunk));
+        end
+        
+        function phases = phaseDiffChunks(chunks, fs)
+           phases = zeros(size(chunks));
+           for i = 1:size(chunks, 1)
+              phases(i, :) = EEGLib.phase_diff(chunks(i, :), fs, 1); 
+           end            
+        end
+        
+        function phase = phase_diff(chunk, fs, plot_res)
+            pretrig = chunk(:, 1:500);
+            x = [0:499];
+            x = 2*pi*x / fs;
+            
+            zci = @(v) find(v(:).*circshift(v(:), [-1 0]) <= 0);
+            
+            amp = max(pretrig) - min(pretrig);
+            period = size(zci(pretrig), 1) / 4;
+            phase = 0;
+            
+
+            fit = @(b, i)  b(1).*(sin(i.*b(2) + b(3)));    % Function to fit
+            fcn = @(b) sum((fit(b, x) - pretrig).^2);                             % Least-Squares cost function
+            s = fminsearch(fcn, [amp;  period;  phase]);
+            sinewave = fit(s, x);
+            
+            xx = [0:1999];
+            xx = 2*pi*xx / fs;
+            sinewave = fit(s, xx);
+            
+            z1 = hilbert(chunk);
+            instfrq = (2*pi)*unwrap(angle(z1));
+            z2 = hilbert(sinewave);
+            instfrq2 = (2*pi)*unwrap(angle(z2));
+            phase = instfrq2 - instfrq;
+            phase = (phase - min(phase))/ (max(phase) - min(phase));
+            
+            xxx = 1:2000;
+            
+            if(plot_res == 1)
+                subplot(3, 1, 1)     
+                plot(xxx, chunk, xxx, sinewave) 
+
+                subplot(3, 1, 2)
+                plot(xxx, angle(chunk), xxx, angle(sinewave))
+
+                subplot(3, 1, 3)
+                plot(phase)
+            end
+        end
 
         function time = sampleToTime(sample, fs)
             time = sample / fs;

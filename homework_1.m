@@ -7,6 +7,11 @@ chunks = EEGLib.subdivide(signal, trigger, 6, -2, fs);
 alpha_chunks = EEGLib.subdivide(alpha_channel, trigger, 6, -2, fs);
 beta_chunks = EEGLib.subdivide(beta_channel, trigger, 6, -2, fs);
 
+
+alpha_phase = EEGLib.phaseDiffChunks(alpha_chunks, fs);
+beta_phase = EEGLib.phaseDiffChunks(beta_chunks, fs);
+
+
 signal_pow = EEGLib.signalPowerChunks(chunks);
 alpha_pow = EEGLib.signalPowerChunks(alpha_chunks);
 beta_pow = EEGLib.signalPowerChunks(beta_chunks);
@@ -17,101 +22,132 @@ beta_fft = EEGLib.fftChunks(beta_chunks, 250);
 
 hz_60 = fs / 2;
 
-signal_pow_avg = mean(signal_pow, 1);
-alpha_pow_avg = mean(alpha_pow, 1);
-beta_pow_avg = mean(beta_pow, 1);
+signal_pow_avg = mean(EEGLib.movingAvgChunks(signal_pow, 250));
+alpha_pow_avg = mean(EEGLib.movingAvgChunks(alpha_pow, 250));
+beta_pow_avg = mean(EEGLib.movingAvgChunks(beta_pow, 250));
 
-signal_pow_var = std(signal_pow, 1, 1);
-alpha_pow_var = std(alpha_pow, 1, 1);
-beta_pow_var = std(beta_pow, 1, 1);
+signal_pow_var = std(EEGLib.movingAvgChunks(signal_pow, 250));
+alpha_pow_var = std(EEGLib.movingAvgChunks(alpha_pow, 250));
+beta_pow_var = std(EEGLib.movingAvgChunks(beta_pow, 250));
 
-subplot(3, 1, 1);
-plot(signal_pow_avg')
+subplot(2, 1, 1);
+plot(alpha_phase([55 56 74 77], :)');
 hold on;
-plot(signal_pow_avg' + signal_pow_var')
-plot(signal_pow_avg' - signal_pow_var')
+plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
 hold off;
-title('Raw signal Power, mean and mean +/- std')
-ylabel('uVolts^2');
-xlabel('Samples @ 250Hz')
+title('Time Domain Signals - Alpha');
+xlabel('Samples @ 250Hz');
+ylabel('uV');
+legend('55', '56', '74', '77')
 
-subplot(3, 1, 2);
-plot(alpha_pow_avg');
+subplot(2, 1, 2);
+plot(beta_phase([55 56 74 77], :)');
 hold on;
-plot(alpha_pow_avg' + alpha_pow_var');
-plot(alpha_pow_avg' - alpha_pow_var');
+plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
 hold off;
-title('Alpha Channel Power, mean and mean +/- std')
-ylabel('uVolts^2');
-xlabel('Samples @ 250Hz')
+title('Time Domain Signals - Beta');
+xlabel('Samples @ 250Hz');
+ylabel('uV');
+legend('55', '56', '74', '77')
 
-subplot(3, 1, 3);
-plot(beta_pow_avg');
-hold on;
-plot(beta_pow_avg' + beta_pow_var');
-plot(beta_pow_avg' - beta_pow_var');
-hold off;
-title('Beta Channel Power, mean and mean +/- std')
-ylabel('uVolts^2');
-xlabel('Samples @ 250Hz')
+% subplot(3, 1, 1);
+% plot(signal_pow_avg')
+% hold on;
+% %plot(signal_pow_avg' + signal_pow_var')
+% %plot(signal_pow_avg' - signal_pow_var')
+% hold off;
+% title('Raw signal Power, mean with n=250 Moving Avg')
+% ylabel('uVolts');
+% xlabel('Samples @ 250Hz')
+% 
+% subplot(3, 1, 2);
+% plot(alpha_pow_avg');
+% hold on;
+% %plot(alpha_pow_avg' + alpha_pow_var');
+% %plot(alpha_pow_avg' - alpha_pow_var');
+% hold off;
+% title('Alpha Channel Power, mean with n=250 Moving Avg')
+% ylabel('uVolts');
+% xlabel('Samples @ 250Hz')
+% 
+% subplot(3, 1, 3);
+% plot(beta_pow_avg');
+% hold on;
+% %plot(beta_pow_avg' + beta_pow_var');
+% %plot(beta_pow_avg' - beta_pow_var');
+% hold off;
+% title('Beta Channel Power, mean with n=250 Moving Avg')
+% ylabel('uVolts');
+% xlabel('Samples @ 250Hz')
+% 
+% x = 0
 
-% mvg_avg_signal_3 = EEGLib.movingAvg(chunks(20, :), 3);
-% mvg_avg_signal_11 = EEGLib.movingAvg(chunks(20, :), 11);
-% mvg_avg_signal_25 = EEGLib.movingAvg(chunks(20, :), 25);
-% fft_signal = abs(EEGLib.fftSignal(chunks(20, :), hz_60));
+% mvg_avg_signal_3 = EEGLib.movingAvg(chunks(10, :), 3);
+% mvg_avg_signal_11 = EEGLib.movingAvg(chunks(10, :), 11);
+% mvg_avg_signal_25 = EEGLib.movingAvg(chunks(10, :), 25);
+% fft_signal = abs(EEGLib.fftSignal(chunks(10, :), hz_60));
 % fft_mvg_avg_3 = abs(EEGLib.fftSignal(mvg_avg_signal_3, hz_60));
 % fft_mvg_avg_11 = abs(EEGLib.fftSignal(mvg_avg_signal_11, hz_60));
 % fft_mvg_avg_25 = abs(EEGLib.fftSignal(mvg_avg_signal_25, hz_60));
 
-%%% Plot Several chunks on top of each other - Time Domain
+% %% Plot Several chunks on top of each other - Fourier Domain
 % subplot(3, 1, 1);
-% plot(abs(signal_fft(50:53, :)'));
-% title('Signal 50 through 55 - Raw Fourier Domain');
+% plot(abs(signal_fft(55:59, :)'));
+% title('Signal 55 through 59 - Raw Fourier Domain');
 % xlabel('Samples @ 250Hz');
-% ylabel('Magnitude');
+% % ylabel('Magnitude');
 % ylim([0 800])
-% legend('50', '51', '52', '53')
+% legend('55', '56', '57', '58')
 % 
 % subplot(3, 1, 2);
-% plot(abs(alpha_fft(50:53, :)'));
-% title('Signal 50 through 55 - Alpha Fourier Domain');
+% plot(abs(alpha_fft(55:59, :)'));
+% title('Signal 55 through 59 - Alpha Fourier Domain');
 % xlabel('Samples @ 250Hz');
 % ylabel('Magnitude');
 % ylim([0 800])
-% legend('50', '51', '52', '53')
+% legend('55', '56', '57', '58')
 % 
 % subplot(3, 1, 3);
-% plot(abs(beta_fft(50:53, :)'));
-% title('Signal 50 through 55 - Beta Fourier Domain');
+% plot(abs(beta_fft(55:59, :)'));
+% title('Signal 55 through 59 - Beta Fourier Domain');
 % xlabel('Samples @ 250Hz');
 % ylabel('Magnitude');
 % ylim([0 800])
-% legend('50', '51', '52', '53')
+% legend('55', '56', '57', '58')
 
-% %%% Plot Several chunks on top of each other - Time Domain
-% subplot(3, 1, 1);/
-% plot(chunks(50:53, :)');
-% title('Signal 50 through 55 - Raw');
+% %% Plot Several chunks on top of each other - Time Domain
+% subplot(3, 1, 1);
+% plot(signal_pow([55 56 74 77], :), 31)');
+% hold on;
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Time Domain Signals - Raw');
 % xlabel('Samples @ 250Hz');
-% ylabel('uV');
-% legend('50', '51', '52', '53')
+% ylabel('uV');;
+% legend('55', '56', '74', '77')
 % 
 % subplot(3, 1, 2);
-% plot(alpha_chunks(50:53, :)');
-% title('Signal 50 through 55 - Alpha');
+% plot(EEGLib.movingAvgChunks(alpha_pow([55 56 74 77], :), 31)');
+% hold on;
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Time Domain Signals - Alpha');
 % xlabel('Samples @ 250Hz');
 % ylabel('uV');
-% legend('50', '51', '52', '53')
+% legend('55', '56', '74', '77')
 % 
 % subplot(3, 1, 3);
-% plot(beta_chunks(50:53, :)');
-% title('Signal 50 through 55 - Beta');
+% plot(EEGLib.movingAvgChunks(beta_pow(55:59, :), 31)');
+% hold on;
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Time Domain Signals - Beta');
 % xlabel('Samples @ 250Hz');
 % ylabel('uV');
-% legend('50', '51', '52', '53')
-
-
- x = 0;
+% legend('55', '56', '74', '77')
+% 
+% 
+%  x = 0;
 
 %%% Plot Moving Average and FFT
 % subplot(3, 1, 1);
@@ -207,18 +243,83 @@ xlabel('Samples @ 250Hz')
 % ylabel('uV');
 % legend('Raw', 'Alpha', 'Beta');
 
-%Plot the power of the time domain signal
-% plot(EEGLib.signal_power(chunks(20, :)), 'LineWidth', 1);
+% %Plot the power of the time domain signal
+% subplot(3, 1, 1)
+% plot(EEGLib.signal_power(chunks(10, :)), 'LineWidth', 1);
 % hold on;
-% plot(EEGLib.signal_power(alpha_chunks(20, :)), 'LineWidth', 2);
-% plot(EEGLib.signal_power(beta_chunks(20, :)), 'LineWidth', 2);
+% plot(chunks(10, :));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
 % hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Raw and Signal Power'); 
+% xlabel('Samples @ 250Hz');
+% ylabel('uV and uV^2');
+% legend('Raw', 'Power');
 % 
-% title('Trigger 20, 2 seconds before and 6 seconds after Signal Power'); 
+% subplot(3, 1, 2)
+% plot(EEGLib.signal_power(alpha_chunks(10, :)), 'LineWidth', 1);
+% hold on;
+% plot(alpha_chunks(10, :));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Alpha Raw and Signal Power'); 
+% xlabel('Samples @ 250Hz');
+% ylabel('uV and uV^2');
+% legend('Alpha', 'Alpha Power');
+% 
+% subplot(3, 1, 3)
+% plot(EEGLib.signal_power(beta_chunks(10, :)), 'LineWidth', 1);
+% hold on;
+% plot(beta_chunks(10, :));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Beta Raw and Signal Power'); 
+% xlabel('Samples @ 250Hz');
+% ylabel('uV and uV^2');
+% legend('Beta', 'Beta Power');
+
+
+% %Plot the power of the time domain signal
+% subplot(3, 1, 1)
+% plot(EEGLib.signal_power(chunks(10, :)), 'LineWidth', 1);
+% hold on;
+% plot(EEGLib.movingAvg(EEGLib.signal_power(chunks(10, :)), 11));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(chunks(10, :)), 31));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(chunks(10, :)), 51));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Raw Signal Power w/ Moving Avg'); 
 % xlabel('Samples @ 250Hz');
 % ylabel('uV^2');
-% legend('Raw', 'Alpha', 'Beta');
+% legend('Raw Power', 'window = 11', 'window = 31', 'window = 51');
+% 
+% subplot(3, 1, 2)
+% plot(EEGLib.signal_power(alpha_chunks(10, :)), 'LineWidth', 1);
+% hold on;
+% plot(EEGLib.movingAvg(EEGLib.signal_power(alpha_chunks(10, :)), 11));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(alpha_chunks(10, :)), 31));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(alpha_chunks(10, :)), 51));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Alpha Signal Power w/ Moving Avg'); 
+% xlabel('Samples @ 250Hz');
+% ylabel('uV^2');
+% legend('Alpha Power', 'window = 11', 'window = 31', 'window = 51');
+% 
+% subplot(3, 1, 3)
+% plot(EEGLib.signal_power(beta_chunks(10, :)), 'LineWidth', 1);
+% hold on;
+% plot(EEGLib.movingAvg(EEGLib.signal_power(beta_chunks(10, :)), 11));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(beta_chunks(10, :)), 31));
+% plot(EEGLib.movingAvg(EEGLib.signal_power(beta_chunks(10, :)), 51));
+% plot([500, 500], ylim, 'LineStyle', '--', 'Color', 'black', 'LineWidth', 1);
+% hold off;
+% title('Trigger 10, 2 seconds before and 6 seconds after Beta Signal Power w/ Moving Avg'); 
+% xlabel('Samples @ 250Hz');
+% ylabel('uV^2');
+% legend('Beta Power', 'window = 11', 'window = 31', 'window = 51');
 
+% plot(EEGLib.signal_power(alpha_chunks(10, :)), 'LineWidth', 2);
+% plot(EEGLib.signal_power(beta_chunks(10, :)), 'LineWidth', 2);
 
 %Plot the power of the time domain signal
 % plot(signal_avg, 'LineWidth', 1);
