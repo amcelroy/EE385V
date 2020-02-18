@@ -6,12 +6,15 @@ from mne.channels import Layout
 import os
 from pathlib import Path
 
-class EEGLib:
+from EEGLib.EE385VMatFile import EE385VMatFile
+
+
+class EEG:
 
     def open(self, filepath):
         '''
         @param filepath: Path to GDF or .MAT file
-        @:return Tuple (gdf, mat)
+        @:return Tuple (gdf, EE385VMatFile)
         '''
 
         path = Path(filepath)
@@ -28,11 +31,15 @@ class EEGLib:
             raise IOError('Filepath needs to be either a .gdf or .mat file')
 
         gdf = mne.io.read_raw_gdf(gdf_path, preload=True)
-        mat = io.loadmat(mat_path)
+        mat = EE385VMatFile(mat_path)
         return (gdf, mat)
 
 
 if __name__ == "__main__":
-    e = EEGLib()
-    (gdf, mat) = e.open('/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf')
-    print(g.info)
+    e = EEG()
+    (gdf, mat) = e.open(
+        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_172431.gdf')
+
+    mat.targetLetter()
+    mat.ringBuffer()
+    print(gdf.info)
