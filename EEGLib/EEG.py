@@ -45,11 +45,18 @@ class EEG:
         self.__mat = mat
         return (self.__eeg, self.__trigger, mat)
 
-    def getChannels(self):
+    def getChannelNames(self):
+        '''
+        :return: the channel names as a list of strings
+        '''
         return self.__gdf.ch_names
 
     def printChannels(self):
-        print('Availible Channels: ' + str(self.getChannels()))
+        '''
+        Convenience function to print the channel names
+        :return:
+        '''
+        print('Availible Channels: ' + str(self.getChannelNames()))
 
     def getRawEEG(self, channels=['']):
         '''
@@ -70,17 +77,19 @@ class EEG:
         :param trigger: Name of the trigger. i.e. trigger if the channel is trigger:1
         :return: Tuple (Data without Trigger, Trigger)
         '''
-        for channels in self.getChannels():
+        for channels in self.getChannelNames():
             if trigger in channels:
                 trigger = self.__gdf.get_data(picks=channels)
-                data_no_trig = self.__gdf.drop_channels(channels)
-                return (data_no_trig, trigger)
+                data_no_trigger = self.__gdf.drop_channels(channels)
+                return (data_no_trigger, trigger)
 
-
-
-        return self.__gdf
 
     def getAlpha(self):
+        '''
+        Filters the data for the alpha range of frequencies
+
+        :return:
+        '''
         return self.__gdf.filter(l_freq=8, h_freq=12)
 
     def getTheta(self):
@@ -96,10 +105,13 @@ if __name__ == "__main__":
         '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_172431.gdf')
 
     e.printChannels()
-    rawEEG = e.getRawEEG()
-    eeg.plot(highpass=1, lowpass=40, filtorder=6, decim=1, n_channels=8)
+    # alpha = e.getAlpha()
+    # alpha.plot(decim=1)
+
+    theta = e.getTheta()
+    theta.plot(decim=1)
     #gdf.printChannels()
     channels = e.getRawEEG()
     mat.targetLetter()
     mat.ringBuffer()
-    print(gdf.info)
+    #print(gdf.info)
