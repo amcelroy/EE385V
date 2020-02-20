@@ -1,4 +1,5 @@
 from scipy import io
+import numpy as np
 
 
 class EE385VMatFile:
@@ -8,6 +9,11 @@ class EE385VMatFile:
 
     def __init__(self, filepath):
         self.__mat = {}
+        self.__current_action = np.ndarray
+        self.__current_goal = np.ndarray
+        self.__current_action = np.ndarray
+        self.__current_state = np.ndarray
+        self.__word_to_write = ''
         self.open(filepath)
 
     def open(self, filepath):
@@ -18,23 +24,26 @@ class EE385VMatFile:
         :return: Matlab based struct
         '''
         self.__mat = io.loadmat(filepath, mat_dtype=True)['runData']
-        return self.__mat
+        self.__current_action = self.__mat['PM'][0][0]['currentAction'][0][0][0]
+        self.__current_state = self.__mat['PM'][0][0]['currentState'][0][0]
+        self.__current_goal = self.__mat['PM'][0][0]['currentGoal'][0][0]
+        self.__word_to_write = self.__mat['PM'][0][0]['word_to_write_ONLINE'][0][0][0][0][0][0]
 
-    def targetLetter(self):
+    def targetWord(self):
         '''
         Get the intended letter for this trial
 
         :return: Intented Letter
         '''
-        letter = self.__mat['targetLetter'][0][0][0]
-        letter = str(letter)
-        return letter
+        return self.__word_to_write
 
-    def ringBuffer(self):
-        '''
-        Fetches the ringBuffer for this trial
+    def goal(self):
+        return self.__current_goal
 
-        :return:
-        '''
-        buffer = self.__mat['ringbuffer'][0][0]
-        return buffer
+    def actions(self):
+        return self.__current_action
+
+    def states(self):
+        return self.__current_state
+
+

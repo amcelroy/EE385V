@@ -13,7 +13,7 @@ from EEGLib.EE385VMatFile import EE385VMatFile
 class EEG:
     def __init__(self):
         self.__gdf = mne.io.Raw
-        self.__mat = np.ndarray
+        self.__mat = EE385VMatFile
         self.__eeg = mne.io.Raw
         self.__trigger = mne.io.Raw
 
@@ -37,13 +37,12 @@ class EEG:
             raise IOError('Filepath needs to be either a .gdf or .mat file')
 
         gdf = mne.io.read_raw_gdf(gdf_path, preload=True)
-        mat = EE385VMatFile(mat_path)
         self.__gdf = gdf
         # Scale to microvolts, see: https://github.com/mne-tools/mne-python/issues/5539
         self.__eeg, self.__trigger = self.splitTrigger(trigger='trigger')
         self.__eeg = self.__eeg.apply_function(lambda x: x / 1e6)
-        self.__mat = mat
-        return (self.__eeg, self.__trigger, mat)
+        self.__mat = EE385VMatFile(mat_path)
+        return (self.__eeg, self.__trigger, self.__mat)
 
     def getChannelNames(self):
         '''
@@ -98,11 +97,36 @@ class EEG:
     def getBeta(self):
         return self.__gdf.filter(l_freq=12, h_freq=30)
 
+    def timeToSample(self, time, fs=512):
+        return time*fs
+
+    def timeArrayToSampleArray(self, time=np.ndarray, fs=512):
+        return np.apply_along_axis(self.timeToSample, 0, time, fs=fs).astype(np.uint)
+
+    def identifyErrors(self):
+        annotation_time = self.__gdf.annotations.onset[1:]
+        annotation_time = annotation_time[:-1]
+        annotation_desc = self.__gdf.annotations.description[1:]
+        annotation_desc = annotation_desc[:-1]
+        intention = self.__mat.actions()
+        states = self.__mat.states()[:, 1:]
+        states = states[:, :len(intention)]
+        error = []
+        for x in range(states.shape[1]):
+            if states[0, x] != states[1, x]:
+                error.append(True)
+            else:
+                error.append(False)
+        return (np.asarray(error, dtype=np.bool_), annotation_time)
+
 
 if __name__ == "__main__":
     e = EEG()
     (eeg, trig, mat) = e.open(
         '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_172431.gdf')
+
+    error, time = e.identifyErrors()
+    time_as_sample = e.timeArrayToSampleArray(time)
 
     e.printChannels()
     # alpha = e.getAlpha()
