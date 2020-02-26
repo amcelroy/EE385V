@@ -6,6 +6,7 @@ from mne.channels import Layout
 import numpy as np
 import os
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 from EEGLib.EE385VMatFile import EE385VMatFile
 
@@ -82,6 +83,58 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
+    def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, plot=False, plot_trigger=0) -> np.Array:
+        '''
+
+        :param pretime: Pre Trigger time in seconds. i.e. 2 -> T - 2s
+        :param posttime: Post Trigger time in seconds
+        :param error: Select trigger events where the error is either True or False
+        :param gdf: mne.io.Raw gdf file
+        :param plot: If True, plot some example data
+        :param plot_trigger: Selects the trigger event to display, 0 by default
+        :return: Numpy array of (Trigger Event, 16, Samples)
+        '''
+
+        if gdf == mne.io.Raw:
+            gdf_use = self.__gdf
+        else:
+            gdf_use = gdf
+
+        pretime_s = self.timeToSample(pretime)*-1
+        posttime_s = self.timeToSample(posttime)
+
+        error_array, time = self.identifyErrors()
+
+        time = self.timeArrayToSampleArray(time, 512)
+
+        gdf_array = None
+
+        for x in range(time.shape[0]):
+            e = error_array[x]
+            if e.all() == error:
+                t = time[x]
+                start = int(t + pretime_s)
+                stop = int(t + posttime_s)
+                gdf_subset = gdf_use.get_data(start=start, stop=stop)
+
+                if gdf_subset.shape[1] == (pretime_s*-1 + posttime_s):
+                    if plot:
+                        for y in range(gdf_subset.shape[0]):
+                            gdf_subset[y, :] += y*30e-6
+
+                    if gdf_array is None:
+                        gdf_array = np.expand_dims(gdf_subset, 0)
+                    else:
+                        gdf_subset = np.expand_dims(gdf_subset, 0)
+                        gdf_array = np.append(gdf_array, gdf_subset, axis=0)
+
+        if plot:
+            slice = gdf_array[plot_trigger, :, :]
+            plt.plot(slice.squeeze().T)
+            plt.show()
+
+        return gdf_array
+
 
     def getAlpha(self):
         '''
@@ -98,12 +151,32 @@ class EEG:
         return self.__gdf.filter(l_freq=12, h_freq=30)
 
     def timeToSample(self, time, fs=512):
+        '''
+        Converts single time in seconds to a sample point.
+
+        :param time: Time in seconds
+        :param fs: Sampling frequency
+        :return: Time in samples
+        '''
         return time*fs
 
     def timeArrayToSampleArray(self, time=np.ndarray, fs=512):
+        '''
+        Converts an array of times to an array of samples
+
+        :param time: ndarray of time in seconds
+        :param fs: Sampling frequency, default is 512 samples per second
+        :return: ndarray of sample points
+        '''
         return np.apply_along_axis(self.timeToSample, 0, time, fs=fs).astype(np.uint)
 
     def identifyErrors(self):
+        '''
+        Scans the matlab states array and identifies when the intent of the user differed from the actual
+        results.
+
+        :return: Tuple of 1D ndarrays (Error, Time of Error)
+        '''
         annotation_time = self.__gdf.annotations.onset[1:]
         annotation_time = annotation_time[:-1]
         annotation_desc = self.__gdf.annotations.description[1:]
@@ -125,12 +198,13 @@ if __name__ == "__main__":
     (eeg, trig, mat) = e.open(
         '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_172431.gdf')
 
-    error, time = e.identifyErrors()
-    time_as_sample = e.timeArrayToSampleArray(time)
+    x = e.getEEGTrials(pretime=2, posttime=4, error=True, plot=True)
 
     e.printChannels()
     # alpha = e.getAlpha()
     # alpha.plot(decim=1)
+
+
 
     theta = e.getTheta()
     theta.plot(decim=1)
