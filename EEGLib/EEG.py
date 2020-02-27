@@ -83,7 +83,7 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
-    def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, plot=False, plot_trigger=0) -> np.Array:
+    def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False, plot_trigger=0):
         '''
 
         :param pretime: Pre Trigger time in seconds. i.e. 2 -> T - 2s
@@ -91,6 +91,8 @@ class EEG:
         :param error: Select trigger events where the error is either True or False
         :param gdf: mne.io.Raw gdf file
         :param plot: If True, plot some example data
+        :param offset_value: Value, in microvolts, to add to each channel, used for visualization
+        :param offset: Adds a 30uV offset to each EEG channel, easier for visualization, default is False
         :param plot_trigger: Selects the trigger event to display, 0 by default
         :return: Numpy array of (Trigger Event, 16, Samples)
         '''
@@ -118,9 +120,9 @@ class EEG:
                 gdf_subset = gdf_use.get_data(start=start, stop=stop)
 
                 if gdf_subset.shape[1] == (pretime_s*-1 + posttime_s):
-                    if plot:
+                    if plot or offset:
                         for y in range(gdf_subset.shape[0]):
-                            gdf_subset[y, :] += y*30e-6
+                            gdf_subset[y, :] += y*offset_value*1e-6
 
                     if gdf_array is None:
                         gdf_array = np.expand_dims(gdf_subset, 0)
@@ -134,6 +136,16 @@ class EEG:
             plt.show()
 
         return gdf_array
+
+    def CARFilter(self, eegVolume=np.array):
+        filtered = np.zeros(eegVolume.shape)
+        for trigger in range(eegVolume.shape[0]):
+            eeg_slice = eegVolume[trigger, :, :]
+            global_avg = np.mean(eeg_slice, axis=0)
+            eeg_slice -= global_avg
+            filtered[trigger, :, :] = eeg_slice
+
+        return filtered
 
 
     def getAlpha(self):
@@ -196,15 +208,30 @@ class EEG:
 if __name__ == "__main__":
     e = EEG()
     (eeg, trig, mat) = e.open(
-        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_172431.gdf')
+        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf')
 
-    x = e.getEEGTrials(pretime=2, posttime=4, error=True, plot=True)
+    theta = e.getTheta()
+
+    error = e.getEEGTrials(pretime=2, posttime=4, error=True, plot=False, offset=True, gdf=theta, offset_value=5)
+    no_error = e.getEEGTrials(pretime=2, posttime=4, error=False, plot=False, offset=True, gdf=theta, offset_value=5)
+
+    error = e.CARFilter(error)
+    no_error = e.CARFilter(no_error)
 
     e.printChannels()
     # alpha = e.getAlpha()
     # alpha.plot(decim=1)
 
+    averaged_error = np.mean(error, axis=0)
+    averaged_no_Error = np.mean(no_error, axis=0)
 
+    fig, ax = plt.subplots(1, 2)
+
+    ax[0].plot(averaged_error.T)
+    ax[0].set_title('Grand Average With Error')
+    ax[1].plot(averaged_no_Error.T)
+    ax[1].set_title('Grand Average With No Error')
+    plt.show()
 
     theta = e.getTheta()
     theta.plot(decim=1)
