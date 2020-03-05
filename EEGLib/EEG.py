@@ -1,8 +1,4 @@
 import mne
-import scipy
-from scipy import io
-from mne import Epochs
-from mne.channels import Layout
 import numpy as np
 import os
 from pathlib import Path
@@ -12,23 +8,24 @@ from EEGLib.EE385VMatFile import EE385VMatFile
 from EEGLib.Feature.STFTFeature import STFTFeature
 
 channel_names_spellers = {
-    'eeg:1' : 'Fz',
-    'eeg:2' : 'FC3',
-    'eeg:3' : 'FC1',
-    'eeg:4' : 'FCz',
-    'eeg:5' : 'FC2',
-    'eeg:6' : 'FC4',
-    'eeg:7' : 'C3',
-    'eeg:8' : 'C1',
-    'eeg:9' : 'Cz',
-    'eeg:10' : 'C2',
-    'eeg:11' : 'C4',
-    'eeg:12' : 'CP3',
-    'eeg:13' : 'CP1',
-    'eeg:14' : 'CPz',
-    'eeg:15' : 'CP2',
-    'eeg:16' : 'CP4'
+    'eeg:1': 'Fz',
+    'eeg:2': 'FC3',
+    'eeg:3': 'FC1',
+    'eeg:4': 'FCz',
+    'eeg:5': 'FC2',
+    'eeg:6': 'FC4',
+    'eeg:7': 'C3',
+    'eeg:8': 'C1',
+    'eeg:9': 'Cz',
+    'eeg:10': 'C2',
+    'eeg:11': 'C4',
+    'eeg:12': 'CP3',
+    'eeg:13': 'CP1',
+    'eeg:14': 'CPz',
+    'eeg:15': 'CP2',
+    'eeg:16': 'CP4'
 }
+
 
 class EEG:
     def __init__(self):
@@ -107,8 +104,8 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
-
-    def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False, plot_trigger=0):
+    def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False,
+                     plot_trigger=0):
         '''
 
         :param pretime: Pre Trigger time in seconds. i.e. 2 -> T - 2s
@@ -127,7 +124,7 @@ class EEG:
         else:
             gdf_use = gdf
 
-        pretime_s = self.timeToSample(pretime)*-1
+        pretime_s = self.timeToSample(pretime) * -1
         posttime_s = self.timeToSample(posttime)
 
         error_array, time = self.identifyErrors()
@@ -145,10 +142,10 @@ class EEG:
                     stop = int(t + posttime_s)
                     gdf_subset = gdf_use.get_data(start=start, stop=stop)
 
-                    if gdf_subset.shape[1] == (pretime_s*-1 + posttime_s):
+                    if gdf_subset.shape[1] == (pretime_s * -1 + posttime_s):
                         if plot or offset:
                             for y in range(gdf_subset.shape[0]):
-                                gdf_subset[y, :] += y*offset_value*1e-6
+                                gdf_subset[y, :] += y * offset_value * 1e-6
 
                         if gdf_array is None:
                             gdf_array = np.expand_dims(gdf_subset, 0)
@@ -201,14 +198,14 @@ class EEG:
         return grand_var
 
     def power(self, eegVolume=np.ndarray):
-        pow = eegVolume**2
+        pow = eegVolume ** 2
         pow = np.sqrt(pow)
         return pow
 
     def addOffset(self, eegVolume=np.ndarray, value=5e-6):
         for x in range(eegVolume.shape[0]):
-            eegVolume[x, :] += value*x
-        return  eegVolume
+            eegVolume[x, :] += value * x
+        return eegVolume
 
     def getAlpha(self):
         '''
@@ -232,7 +229,7 @@ class EEG:
         :param fs: Sampling frequency
         :return: Time in samples
         '''
-        return time*fs
+        return time * fs
 
     def timeArrayToSampleArray(self, time=np.ndarray, fs=512):
         '''
@@ -289,9 +286,9 @@ if __name__ == "__main__":
     no_error = e.getEEGTrials(pretime=.5, posttime=1, error=False, plot=False, gdf=theta)
 
     error = e.CARFilter(error)
-    #error = e.power(error)
+    # error = e.power(error)
     no_error = e.CARFilter(no_error)
-    #no_error = e.power(no_error)
+    # no_error = e.power(no_error)
 
     e.printChannels()
     # alpha = e.getAlpha()
@@ -304,12 +301,17 @@ if __name__ == "__main__":
     averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
 
     stftfeature = STFTFeature()
-    spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error, plot=False, window=512, overlap=468,
-                     trigger_event=[np.arange(error.shape[0])], pre_trigger_time=.5, fs=512,
-                     ac_filter=True)
+    spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error,
+                                                                    plot=True,
+                                                                    window=512,
+                                                                    overlap=468,
+                                                                    trigger_event=[20],
+                                                                    pre_trigger_time=.5,
+                                                                    fs=512,
+                                                                    frequency_range=[3, 8],
+                                                                    channel_names=e.getChannelNames())
 
-
-    plt.imshow(grand_avg[9])
+    plt.imshow(grand_var[9])
     plt.show()
 
     fig, ax = plt.subplots(1, 2)
@@ -322,8 +324,8 @@ if __name__ == "__main__":
 
     theta = e.getTheta()
     theta.plot(decim=1)
-    #gdf.printChannels()
+    # gdf.printChannels()
     channels = e.getRawEEG()
     mat.targetLetter()
     mat.ringBuffer()
-    #print(gdf.info)
+    # print(gdf.info)
