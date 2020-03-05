@@ -1,4 +1,4 @@
-from EEGLib.BCIModel import BCIModel
+from EEGLib.Models.BCIModel import BCIModel
 import numpy as np
 
 

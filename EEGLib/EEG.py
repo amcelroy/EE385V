@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from EEGLib.EE385VMatFile import EE385VMatFile
+from EEGLib.Feature.STFTFeature import STFTFeature
 
 
 class EEG:
@@ -83,6 +84,7 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
+
     def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False, plot_trigger=0):
         '''
 
@@ -94,7 +96,7 @@ class EEG:
         :param offset_value: Value, in microvolts, to add to each channel, used for visualization
         :param offset: Adds a 30uV offset to each EEG channel, easier for visualization, default is False
         :param plot_trigger: Selects the trigger event to display, 0 by default
-        :return: Numpy array of (Trigger Event, 16, Samples)
+        :return: Numpy array of (Trigger Event, EEG Channels, Samples)
         '''
 
         if gdf == mne.io.Raw:
@@ -137,7 +139,14 @@ class EEG:
 
         return gdf_array
 
-    def CARFilter(self, eegVolume=np.array):
+    def CARFilter(self, eegVolume=np.ndarray):
+        '''
+        Common average reference filter. Takes all EEG in the given dataset and averages them in time and then
+        subtracts the average from each EEG channel
+
+        :param eegVolume: Numpy array of shape (trigger, eeg, time)
+        :return: eegVolume with the applied CAR Filter
+        '''
         filtered = np.zeros(eegVolume.shape)
         for trigger in range(eegVolume.shape[0]):
             eeg_slice = eegVolume[trigger, :, :]
@@ -147,6 +156,35 @@ class EEG:
 
         return filtered
 
+    def grandAverage(self, eegVolume=np.ndarray):
+        '''
+        Takes the average of each EEG channel across all trigger events.
+
+        :param eegVolume: Numpy array of shape (trigger, eeg, time)
+        :return: Numpy array of (eeg, time)
+        '''
+        grand_avg = np.mean(eegVolume, axis=0)
+        return grand_avg
+
+    def grandVariance(self, eegVolume=np.ndarray):
+        '''
+        Takes the variance of each EEG channel across all trigger events.
+
+        :param eegVolume: Numpy array of shape (trigger, eeg, time)
+        :return: Numpy array of (eeg, time)
+        '''
+        grand_var = np.var(eegVolume, axis=0)
+        return grand_var
+
+    def power(self, eegVolume=np.ndarray):
+        pow = eegVolume**2
+        pow = np.sqrt(pow)
+        return pow
+
+    def addOffset(self, eegVolume=np.ndarray, value=5e-6):
+        for x in range(eegVolume.shape[0]):
+            eegVolume[x, :] += value*x
+        return  eegVolume
 
     def getAlpha(self):
         '''
@@ -198,10 +236,13 @@ class EEG:
         states = states[:, :len(intention)]
         error = []
         for x in range(states.shape[1]):
-            if states[0, x] != states[1, x]:
+            if states[0, x] < 0:
+                pass
+            elif states[0, x] != states[1, x]:
                 error.append(True)
             else:
                 error.append(False)
+        total_error = np.sum(error)
         return (np.asarray(error, dtype=np.bool_), annotation_time)
 
 
@@ -212,18 +253,34 @@ if __name__ == "__main__":
 
     theta = e.getTheta()
 
-    error = e.getEEGTrials(pretime=2, posttime=4, error=True, plot=False, offset=True, gdf=theta, offset_value=5)
-    no_error = e.getEEGTrials(pretime=2, posttime=4, error=False, plot=False, offset=True, gdf=theta, offset_value=5)
+    error = e.getEEGTrials(
+        pretime=.5,
+        posttime=1,
+        error=True,
+        plot=False,
+        gdf=theta,
+    )
+    no_error = e.getEEGTrials(pretime=.5, posttime=1, error=False, plot=False, gdf=theta)
 
     error = e.CARFilter(error)
+    #error = e.power(error)
     no_error = e.CARFilter(no_error)
+    #no_error = e.power(no_error)
 
     e.printChannels()
     # alpha = e.getAlpha()
     # alpha.plot(decim=1)
 
     averaged_error = np.mean(error, axis=0)
+    averaged_error = e.addOffset(averaged_error, 1e-6)
+
     averaged_no_Error = np.mean(no_error, axis=0)
+    averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
+
+    stftfeature = STFTFeature()
+    spectro = stftfeature.filter(error, plot=True, window_size=512, overlap=468,
+                     trigger_event=[np.arange(error.shape[0])], pre_trigger_time=.5, fs=512,
+                     ac_filter=True)
 
     fig, ax = plt.subplots(1, 2)
 
