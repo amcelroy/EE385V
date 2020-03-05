@@ -8,7 +8,7 @@ from EEGLib.Feature.BCIFeature import BCIFeature
 
 class STFTFeature(BCIFeature):
 
-    def filter(self, eegVolume=np.ndarray, window=64, overlap=48, plot=False, trigger_event=[0],
+    def extract(self, eegVolume=np.ndarray, window=64, overlap=48, plot=False, trigger_event=[0],
              fs=512, pre_trigger_time=0, save_plot_filename='', ac_filter=False):
         '''
         Wraps Scipy STFT and applies it to an EEG Volume
@@ -23,7 +23,7 @@ class STFTFeature(BCIFeature):
                     1D Frequency
                     1D Time
         '''
-        super().filter(window)
+        super().extract(window)
         freq, time, data = stft(eegVolume, fs=fs, nperseg=window, noverlap=overlap, axis=-1)
         data = np.abs(data)
         data = data[:, :, :16, :]

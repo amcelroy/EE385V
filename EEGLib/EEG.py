@@ -11,6 +11,24 @@ import matplotlib.pyplot as plt
 from EEGLib.EE385VMatFile import EE385VMatFile
 from EEGLib.Feature.STFTFeature import STFTFeature
 
+channel_names_spellers = {
+    'eeg:1' : 'Fz',
+    'eeg:2' : 'FC3',
+    'eeg:3' : 'FC1',
+    'eeg:4' : 'FCz',
+    'eeg:5' : 'FC2',
+    'eeg:6' : 'FC4',
+    'eeg:7' : 'C3',
+    'eeg:8' : 'C1',
+    'eeg:9' : 'Cz',
+    'eeg:10' : 'C2',
+    'eeg:11' : 'C4',
+    'eeg:12' : 'CP3',
+    'eeg:13' : 'CP1',
+    'eeg:14' : 'CPz',
+    'eeg:15' : 'CP2',
+    'eeg:16' : 'CP4'
+}
 
 class EEG:
     def __init__(self):
@@ -19,9 +37,10 @@ class EEG:
         self.__eeg = mne.io.Raw
         self.__trigger = mne.io.Raw
 
-    def open(self, filepath):
+    def open(self, filepath, channel_names=None):
         '''
         @param filepath: Path to GDF or .MAT file
+        @param channel_names: Name of the Channels, defaults to numeric
         @:return Tuple (EEG data scaled to V, trigger, EE385VMatFile)
         '''
 
@@ -39,6 +58,10 @@ class EEG:
             raise IOError('Filepath needs to be either a .gdf or .mat file')
 
         gdf = mne.io.read_raw_gdf(gdf_path, preload=True)
+
+        if channel_names:
+            gdf.rename_channels(channel_names)
+
         self.__gdf = gdf
         # Scale to microvolts, see: https://github.com/mne-tools/mne-python/issues/5539
         self.__eeg, self.__trigger = self.splitTrigger(trigger='trigger')
@@ -115,22 +138,23 @@ class EEG:
 
         for x in range(time.shape[0]):
             e = error_array[x]
-            if e.all() == error:
-                t = time[x]
-                start = int(t + pretime_s)
-                stop = int(t + posttime_s)
-                gdf_subset = gdf_use.get_data(start=start, stop=stop)
+            if e is not np.NaN:
+                if e == error:
+                    t = time[x]
+                    start = int(t + pretime_s)
+                    stop = int(t + posttime_s)
+                    gdf_subset = gdf_use.get_data(start=start, stop=stop)
 
-                if gdf_subset.shape[1] == (pretime_s*-1 + posttime_s):
-                    if plot or offset:
-                        for y in range(gdf_subset.shape[0]):
-                            gdf_subset[y, :] += y*offset_value*1e-6
+                    if gdf_subset.shape[1] == (pretime_s*-1 + posttime_s):
+                        if plot or offset:
+                            for y in range(gdf_subset.shape[0]):
+                                gdf_subset[y, :] += y*offset_value*1e-6
 
-                    if gdf_array is None:
-                        gdf_array = np.expand_dims(gdf_subset, 0)
-                    else:
-                        gdf_subset = np.expand_dims(gdf_subset, 0)
-                        gdf_array = np.append(gdf_array, gdf_subset, axis=0)
+                        if gdf_array is None:
+                            gdf_array = np.expand_dims(gdf_subset, 0)
+                        else:
+                            gdf_subset = np.expand_dims(gdf_subset, 0)
+                            gdf_array = np.append(gdf_array, gdf_subset, axis=0)
 
         if plot:
             slice = gdf_array[plot_trigger, :, :]
@@ -237,19 +261,21 @@ class EEG:
         error = []
         for x in range(states.shape[1]):
             if states[0, x] < 0:
-                pass
+                error.append(np.NaN)
             elif states[0, x] != states[1, x]:
                 error.append(True)
             else:
                 error.append(False)
         total_error = np.sum(error)
-        return (np.asarray(error, dtype=np.bool_), annotation_time)
+        return (error, annotation_time)
 
 
 if __name__ == "__main__":
     e = EEG()
     (eeg, trig, mat) = e.open(
-        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf')
+        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf',
+        channel_names=channel_names_spellers
+    )
 
     theta = e.getTheta()
 
@@ -278,9 +304,13 @@ if __name__ == "__main__":
     averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
 
     stftfeature = STFTFeature()
-    spectro = stftfeature.filter(error, plot=True, window_size=512, overlap=468,
+    spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error, plot=False, window=512, overlap=468,
                      trigger_event=[np.arange(error.shape[0])], pre_trigger_time=.5, fs=512,
                      ac_filter=True)
+
+
+    plt.imshow(grand_avg[9])
+    plt.show()
 
     fig, ax = plt.subplots(1, 2)
 
