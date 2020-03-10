@@ -4,28 +4,8 @@ import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from EEGLib.EE385VMatFile import EE385VMatFile
-from EEGLib.Feature.STFTFeature import STFTFeature
-
-channel_names_spellers = {
-    'eeg:1': 'Fz',
-    'eeg:2': 'FC3',
-    'eeg:3': 'FC1',
-    'eeg:4': 'FCz',
-    'eeg:5': 'FC2',
-    'eeg:6': 'FC4',
-    'eeg:7': 'C3',
-    'eeg:8': 'C1',
-    'eeg:9': 'Cz',
-    'eeg:10': 'C2',
-    'eeg:11': 'C4',
-    'eeg:12': 'CP3',
-    'eeg:13': 'CP1',
-    'eeg:14': 'CPz',
-    'eeg:15': 'CP2',
-    'eeg:16': 'CP4'
-}
-
+from EE385VMatFile import EE385VMatFile
+from Feature import STFTFeature
 
 class EEG:
     def __init__(self):
@@ -266,66 +246,3 @@ class EEG:
         total_error = np.sum(error)
         return (error, annotation_time)
 
-
-if __name__ == "__main__":
-    e = EEG()
-    (eeg, trig, mat) = e.open(
-        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf',
-        channel_names=channel_names_spellers
-    )
-
-    theta = e.getTheta()
-
-    error = e.getEEGTrials(
-        pretime=.5,
-        posttime=1,
-        error=True,
-        plot=False,
-        gdf=theta,
-    )
-    no_error = e.getEEGTrials(pretime=.5, posttime=1, error=False, plot=False, gdf=theta)
-
-    error = e.CARFilter(error)
-    # error = e.power(error)
-    no_error = e.CARFilter(no_error)
-    # no_error = e.power(no_error)
-
-    e.printChannels()
-    # alpha = e.getAlpha()
-    # alpha.plot(decim=1)
-
-    averaged_error = np.mean(error, axis=0)
-    averaged_error = e.addOffset(averaged_error, 1e-6)
-
-    averaged_no_Error = np.mean(no_error, axis=0)
-    averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
-
-    stftfeature = STFTFeature()
-    spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error,
-                                                                    plot=True,
-                                                                    window=512,
-                                                                    overlap=468,
-                                                                    trigger_event=[20],
-                                                                    pre_trigger_time=.5,
-                                                                    fs=512,
-                                                                    frequency_range=[3, 8],
-                                                                    channel_names=e.getChannelNames())
-
-    plt.imshow(grand_var[9])
-    plt.show()
-
-    fig, ax = plt.subplots(1, 2)
-
-    ax[0].plot(averaged_error.T)
-    ax[0].set_title('Grand Average With Error')
-    ax[1].plot(averaged_no_Error.T)
-    ax[1].set_title('Grand Average With No Error')
-    plt.show()
-
-    theta = e.getTheta()
-    theta.plot(decim=1)
-    # gdf.printChannels()
-    channels = e.getRawEEG()
-    mat.targetLetter()
-    mat.ringBuffer()
-    # print(gdf.info)

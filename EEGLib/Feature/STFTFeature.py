@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from celluloid import Camera
 from scipy.signal import stft
 
-from EEGLib.Feature.BCIFeature import BCIFeature
+from Feature.BCIFeature import BCIFeature
 
 
 class STFTFeature(BCIFeature):
@@ -75,3 +75,16 @@ class STFTFeature(BCIFeature):
                 plt.savefig(save_plot_filename)
 
         return data, freq, time, grand_avg, grand_var
+
+    def plot(self, ax=plt.Axes, data=np.ndarray):
+        for x in range(data.shape[0]):
+            ax[x].imshow(data[x], aspect='auto')
+            ax[x].xaxis.set_visible(False)
+            ax[x].yaxis.set_visible(False)
+
+    def addYLabels(self, ax=plt.Axes, channels=['']):
+        for x in range(len(channels)):
+            ax[x].set_ylabel(channels[x])
+            ax[x].set_yticks([])
+            ax[x].set_yticks([])
+            ax[x].yaxis.set_visible(True)
