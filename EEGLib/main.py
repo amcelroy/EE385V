@@ -5,6 +5,7 @@ from EEG import EEG
 import numpy as np
 import matplotlib.pyplot as plt
 from Feature.STFTFeature import STFTFeature
+from configparser import ConfigParser
 
 channel_names_spellers = {
     'eeg:1': 'Fz',
@@ -25,16 +26,22 @@ channel_names_spellers = {
     'eeg:16': 'CP4'
 }
 
-root = '/home/amcelroy/Code/EE385V/ErrPSpeller'
+parser = ConfigParser()
+parser.read('config.ini')
+
+root = parser['INFO']['root']
 
 dsl = DatasetLoader(root)
 
 offline_dict = dsl.getOffline()
 
+fig_size = (12, 7)
+
 for subject in offline_dict.keys():
     runs = offline_dict[subject]
 
-    fig, ax = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()))
+    fig, ax = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()),\
+         figsize = fig_size)
 
     count = 0
     for run in runs:
