@@ -1,4 +1,14 @@
+import matplotlib
+from scipy.signal import correlate2d
+
+from Feature.BCIFeature import BCIFeature
+from Feature.PowerFeature import PowerFeature
+
+matplotlib.use("TkAgg")
+
 import os
+
+import scipy
 
 from DatasetLoader import DatasetLoader
 from EEG import EEG
@@ -31,10 +41,32 @@ dsl = DatasetLoader(root)
 
 offline_dict = dsl.getOffline()
 
+grand_avg_error_array = []
+grand_avg_no_error_array = []
+grand_var_error_array = []
+grand_var_no_error_array = []
+
+def applyFeature(triggerSplitVolume=np.ndarray, feature=BCIFeature, window=64, overlap=48):
+    grand_grand_avg_error = []
+    grand_grand_avg_var = []
+
+    if isinstance(feature, STFTFeature):
+        feature_vol, grand_avg, grand_var, freq, time = stftfeature.extract(triggerSplitVolume,
+                                                                        window=window,
+                                                                        overlap=overlap,
+                                                                        pre_trigger_time=.5,
+                                                                        fs=512,
+                                                                        frequency_range=[4, 8])
+        return feature_vol, grand_avg, grand_var, freq, time
+    else:
+        feature_vol, grand_avg, grand_var = feature.extract(error, window, overlap)
+
+    return feature_vol, grand_avg, grand_var
+
 for subject in offline_dict.keys():
     runs = offline_dict[subject]
 
-    fig, ax = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()))
+    grand_avg_fig, grand_avg_axis = plt.subplots(len(channel_names_spellers), 3)
 
     count = 0
     for run in runs:
@@ -45,7 +77,8 @@ for subject in offline_dict.keys():
             channel_names=channel_names_spellers
         )
 
-        theta = e.getTheta()
+        #theta = e.getTheta()
+        theta = eeg
 
         error = e.getEEGTrials(
             pretime=.5,
@@ -59,28 +92,68 @@ for subject in offline_dict.keys():
         error = e.CARFilter(error)
         no_error = e.CARFilter(no_error)
 
-        averaged_error = np.mean(error, axis=0)
-        averaged_error = e.addOffset(averaged_error, 1e-6)
-
-        averaged_no_Error = np.mean(no_error, axis=0)
-        averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
-
         stftfeature = STFTFeature()
-        spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error,
-                                                                        plot=False,
-                                                                        window=512,
-                                                                        overlap=468,
-                                                                        trigger_event=[20],
-                                                                        pre_trigger_time=.5,
-                                                                        fs=512,
-                                                                        frequency_range=[4, 8],
-                                                                        channel_names=e.getChannelNames())
+        feature_vol, grand_avg, grand_var, freq, time = applyFeature(error, stftfeature, 512, 496)
+        grand_avg_error_array.append(grand_avg)
+        grand_var_error_array.append(grand_var)
 
-        stftfeature.plot(ax[..., count], grand_avg)
-        if not count:
-            stftfeature.addYLabels(ax[..., count], e.getChannelNames())
+        # powerfeature = PowerFeature()
+        # feature_vol, grand_avg, grand_var = applyFeature(error, stftfeature, 48, 32)
+
+
+
+        feature_vol, grand_avg, grand_var, freq, time = applyFeature(no_error, stftfeature, 512, 496)
+        grand_avg_no_error_array.append(grand_avg)
+        grand_var_no_error_array.append(grand_var)
         count += 1
 
-    plt.title('{} identified as Error Potentials'.format(subject))
+    # plt.show()
+    # fig_error.show()
+    # fig_no_error.show()
+
+    grand_grand_avg_error = np.array(grand_avg_error_array)
+    grand_grand_avg_error = np.log10(grand_grand_avg_error)
+    grand_grand_avg_error = (grand_grand_avg_error - grand_grand_avg_error.min()) / (
+            grand_grand_avg_error.max() - grand_grand_avg_error.min())
+    grand_grand_avg_error = np.mean(grand_grand_avg_error, axis=0)
+
+    grand_grand_avg_no_error = np.array(grand_avg_no_error_array)
+    grand_grand_avg_no_error = np.log10(grand_grand_avg_no_error)
+    grand_grand_avg_no_error = (grand_grand_avg_no_error - grand_grand_avg_no_error.min()) / (
+                grand_grand_avg_no_error.max() - grand_grand_avg_no_error.min())
+    grand_grand_avg_no_error = np.mean(grand_grand_avg_no_error, axis=0)
+
+    grand_grand_var_error = np.array(grand_var_error_array)
+    grand_grand_var_error = np.log10(grand_grand_var_error)
+    grand_grand_var_error = (grand_grand_var_error - grand_grand_var_error.min()) / (
+                grand_grand_var_error.max() - grand_grand_var_error.min())
+    grand_grand_var_error = np.mean(grand_grand_var_error, axis=0)
+
+    stftfeature.plot(grand_avg_axis[..., 0], grand_grand_avg_error)
+    stftfeature.plot(grand_avg_axis[..., 1], grand_grand_avg_no_error)
+    stftfeature.addYLabels(grand_avg_axis[..., 0], e.getChannelNames())
+    stftfeature.addXLabels(grand_avg_axis[..., 0], time=time)
+    stftfeature.addXLabels(grand_avg_axis[..., 1], time=time)
+
+    corr = []
+    for x in range(grand_grand_avg_error.shape[0]):
+        t = grand_grand_avg_error[x] - grand_grand_avg_no_error[x]
+        t = t**2
+        t = t**.5
+        t /= grand_grand_var_error[x]
+        corr.append(t)
+    corr = np.array(corr)
+    stftfeature.plot(grand_avg_axis[..., 2], corr)
+    stftfeature.addXLabels(grand_avg_axis[..., 2], time=time)
+
     plt.show()
+
+    # fig_corr, ax_corr = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()) - 1)
+    # for x in range(0, len(grand_avg_error_array) - 1):
+    #     for y in range(grand_avg_error_array[x].shape[0]):
+    #         covar = np.square(grand_avg_error_array[x][y, ...] - grand_avg_error_array[x + 1][y, ...])
+    #         covar /= grand_var_error_array[x][y, ...]**2
+    #         ax_corr[y, x].imshow(covar)
+    # fig_corr.show()
+
     x = 0

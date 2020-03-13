@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 
 from EE385VMatFile import EE385VMatFile
 from Feature import STFTFeature
+from Feature.BCIFeature import BCIFeature
+
 
 class EEG:
     def __init__(self):
@@ -196,7 +198,7 @@ class EEG:
         return self.__gdf.filter(l_freq=8, h_freq=12)
 
     def getTheta(self):
-        return self.__gdf.filter(l_freq=1, h_freq=8)
+        return self.__gdf.filter(l_freq=4, h_freq=8)
 
     def getBeta(self):
         return self.__gdf.filter(l_freq=12, h_freq=30)
@@ -245,4 +247,3 @@ class EEG:
                 error.append(False)
         total_error = np.sum(error)
         return (error, annotation_time)
-
