@@ -94,3 +94,6 @@ class STFTFeature(BCIFeature):
         ax[ax.shape[0] - 1].xaxis.set_visible(True)
         ax[ax.shape[0] - 1].set_xticks(np.arange(len(time_label)))
         ax[ax.shape[0] - 1].set_xticklabels(time_label, rotation=60)
+
+    def addTitle(self, ax=plt.Axes, title=''):
+        ax[0].set_title(title)

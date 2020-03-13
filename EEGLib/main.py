@@ -133,22 +133,31 @@ for subject in offline_dict.keys():
                 grand_grand_var_error.max() - grand_grand_var_error.min())
     grand_grand_var_error = np.mean(grand_grand_var_error, axis=0)
 
+    grand_grand_var_no_error = np.array(grand_var_no_error_array)
+    grand_grand_var_no_error = np.log10(grand_grand_var_no_error)
+    grand_grand_var_no_error = (grand_grand_var_no_error - grand_grand_var_no_error.min()) / (
+                grand_grand_var_no_error.max() - grand_grand_var_no_error.min())
+    grand_grand_var_no_error = np.mean(grand_grand_var_no_error, axis=0)
+
     stftfeature.plot(grand_avg_axis[..., 0], grand_grand_avg_error)
     stftfeature.plot(grand_avg_axis[..., 1], grand_grand_avg_no_error)
     stftfeature.addYLabels(grand_avg_axis[..., 0], e.getChannelNames())
     stftfeature.addXLabels(grand_avg_axis[..., 0], time=time)
     stftfeature.addXLabels(grand_avg_axis[..., 1], time=time)
+    stftfeature.addTitle(grand_avg_axis[..., 0], title='STFT of Error EEG')
+    stftfeature.addTitle(grand_avg_axis[..., 1], title='STFT of No Error EEG')
 
     corr = []
     for x in range(grand_grand_avg_error.shape[0]):
         t = grand_grand_avg_error[x] - grand_grand_avg_no_error[x]
         t = t**2
         t = t**.5
-        t /= grand_grand_var_error[x]
+        t /= (grand_grand_var_error[x]*grand_grand_var_no_error[x])
         corr.append(t)
     corr = np.array(corr)
     stftfeature.plot(grand_avg_axis[..., 2], corr)
     stftfeature.addXLabels(grand_avg_axis[..., 2], time=time)
+    stftfeature.addTitle(grand_avg_axis[..., 2], title='Cross Correlation of Error / No Error')
 
     plt.show()
 
