@@ -9,7 +9,7 @@ from Feature.BCIFeature import BCIFeature
 class STFTFeature(BCIFeature):
 
     def extract(self, eegVolume=np.ndarray, window=64, overlap=48, plot=False, trigger_event=[0],
-             fs=512, pre_trigger_time=0, save_plot_filename='', frequency_range=None, channel_names=None):
+                fs=512, pre_trigger_time=0, save_plot_filename='', frequency_range=None, channel_names=None):
         '''
         Wraps Scipy STFT and applies it to an EEG Volume
 
@@ -74,7 +74,7 @@ class STFTFeature(BCIFeature):
             if save_plot_filename != '':
                 plt.savefig(save_plot_filename)
 
-        return data, freq, time, grand_avg, grand_var
+        return data, grand_avg, grand_var, freq, time
 
     def plot(self, ax=plt.Axes, data=np.ndarray):
         for x in range(data.shape[0]):
@@ -88,3 +88,9 @@ class STFTFeature(BCIFeature):
             ax[x].set_yticks([])
             ax[x].set_yticks([])
             ax[x].yaxis.set_visible(True)
+
+    def addXLabels(self, ax=plt.Axes, time=[]):
+        time_label = ['{:.2f}'.format(x) for x in time]
+        ax[ax.shape[0] - 1].xaxis.set_visible(True)
+        ax[ax.shape[0] - 1].set_xticks(np.arange(len(time_label)))
+        ax[ax.shape[0] - 1].set_xticklabels(time_label, rotation=60)
