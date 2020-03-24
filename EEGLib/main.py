@@ -1,15 +1,11 @@
 import matplotlib
-from scipy.signal import correlate2d
 
 from Feature.BCIFeature import BCIFeature
-from Feature.PowerFeature import PowerFeature
-from Stats.correlation import Correlation
+from stats import Stats
 
 matplotlib.use("TkAgg")
 
 import os
-
-import scipy
 
 from DatasetLoader import DatasetLoader
 from EEG import EEG
@@ -62,7 +58,7 @@ def applyFeature(triggerSplitVolume=np.ndarray, feature=BCIFeature, window=64, o
                                                                             overlap=overlap,
                                                                             pre_trigger_time=.5,
                                                                             fs=512,
-                                                                            frequency_range=[4, 8])
+                                                                            frequency_range=[4, 9])
         return feature_vol, grand_avg, grand_var, freq, time
     else:
         feature_vol, grand_avg, grand_var = feature.extract(error, window, overlap)
@@ -101,6 +97,8 @@ for subject in offline_dict.keys():
 
         stftfeature = STFTFeature()
         feature_vol, grand_avg, grand_var, freq, time = applyFeature(error, stftfeature, 512, 496)
+        zero_time = np.argwhere(time == 0)
+        zero_time = zero_time[0][0]
         grand_avg_error_array.append(grand_avg)
         grand_var_error_array.append(grand_var)
 
@@ -117,51 +115,54 @@ for subject in offline_dict.keys():
     # fig_no_error.show()
 
     grand_grand_avg_error = np.array(grand_avg_error_array)
-    grand_grand_avg_error = np.log10(grand_grand_avg_error)
+    #grand_grand_avg_error = np.log10(grand_grand_avg_error)
     grand_grand_avg_error = (grand_grand_avg_error - grand_grand_avg_error.min()) / (
             grand_grand_avg_error.max() - grand_grand_avg_error.min())
     grand_grand_avg_error = np.mean(grand_grand_avg_error, axis=0)
 
     grand_grand_avg_no_error = np.array(grand_avg_no_error_array)
-    grand_grand_avg_no_error = np.log10(grand_grand_avg_no_error)
+    #grand_grand_avg_no_error = np.log10(grand_grand_avg_no_error)
     grand_grand_avg_no_error = (grand_grand_avg_no_error - grand_grand_avg_no_error.min()) / (
             grand_grand_avg_no_error.max() - grand_grand_avg_no_error.min())
     grand_grand_avg_no_error = np.mean(grand_grand_avg_no_error, axis=0)
 
     grand_grand_var_error = np.array(grand_var_error_array)
-    grand_grand_var_error = np.log10(grand_grand_var_error)
+    #grand_grand_var_error = np.log10(grand_grand_var_error)
     grand_grand_var_error = (grand_grand_var_error - grand_grand_var_error.min()) / (
             grand_grand_var_error.max() - grand_grand_var_error.min())
     grand_grand_var_error = np.mean(grand_grand_var_error, axis=0)
 
     grand_grand_var_no_error = np.array(grand_var_no_error_array)
-    grand_grand_var_no_error = np.log10(grand_grand_var_no_error)
+    # grand_grand_var_no_error = np.log10(grand_grand_var_no_error)
     grand_grand_var_no_error = (grand_grand_var_no_error - grand_grand_var_no_error.min()) / (
             grand_grand_var_no_error.max() - grand_grand_var_no_error.min())
     grand_grand_var_no_error = np.mean(grand_grand_var_no_error, axis=0)
 
-    stftfeature.plot(grand_avg_axis[..., 0], grand_grand_avg_error)
-    stftfeature.plot(grand_avg_axis[..., 1], grand_grand_avg_no_error)
+    stftfeature.plot(grand_avg_axis[..., 0], grand_grand_avg_error, zero_time=zero_time)
+    stftfeature.plot(grand_avg_axis[..., 1], grand_grand_avg_no_error, zero_time=zero_time)
     stftfeature.addYLabels(grand_avg_axis[..., 0], e.getChannelNames())
     stftfeature.addXLabels(grand_avg_axis[..., 0], time=time)
     stftfeature.addXLabels(grand_avg_axis[..., 1], time=time)
-    stftfeature.addTitle(grand_avg_axis[..., 0], title='STFT of Error EEG')
-    stftfeature.addTitle(grand_avg_axis[..., 1], title='STFT of No Error EEG')
+    stftfeature.addTitle(grand_avg_axis[..., 0], title='Normalized STFT of Error EEG')
+    stftfeature.addTitle(grand_avg_axis[..., 1], title='Normalized STFT of No Error EEG')
 
     corr = []
-    c = Correlation()
+    c = Stats()
     for x in range(grand_grand_avg_error.shape[0]):
-        t = c.cross_correlation(grand_grand_avg_error[x],
+        t = c.squared_error(grand_grand_avg_error[x],
                                 grand_grand_avg_no_error[x],
-                                grand_grand_var_error[x],
-                                grand_grand_var_no_error[x])
+                                )
         corr.append(t)
     corr = np.array(corr)
-    stftfeature.plot(grand_avg_axis[..., 2], corr)
+    stftfeature.plot(grand_avg_axis[..., 2], corr, zero_time=zero_time)
     stftfeature.addXLabels(grand_avg_axis[..., 2], time=time)
-    stftfeature.addTitle(grand_avg_axis[..., 2], title='Cross Correlation of Error / No Error')
+    stftfeature.addFreqLabels(grand_avg_axis[..., 2], tick_labels=[4, 5, 6, 7, 8])
+    stftfeature.addTitle(grand_avg_axis[..., 2], title='MSE of Error / No Error')
+    grand_avg_fig.suptitle('Grand Average for Error, No Error, MSE - {}'.format(subject))
 
-    plt.show()
+    # plt.show()
+    grand_avg_fig.set_size_inches((25, 18), forward=False)
+    plt.savefig('grand_avg_{}.png'.format(subject), dpi=100)
 
     # fig_corr, ax_corr = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()) - 1)
     # for x in range(0, len(grand_avg_error_array) - 1):
