@@ -160,6 +160,8 @@ for subject in offline_dict.keys():
     stftfeature.addTitle(grand_avg_axis[..., 2], title='MSE of Error / No Error')
     grand_avg_fig.suptitle('Grand Average for Error, No Error, MSE - {}'.format(subject))
 
+    e.topoplot(grand_grand_avg_error)
+
     # plt.show()
     grand_avg_fig.set_size_inches((25, 18), forward=False)
     plt.savefig('grand_avg_{}.png'.format(subject), dpi=100)
@@ -171,5 +173,7 @@ for subject in offline_dict.keys():
     #         covar /= grand_var_error_array[x][y, ...]**2
     #         ax_corr[y, x].imshow(covar)
     # fig_corr.show()
+
+
 
     x = 0

@@ -3,6 +3,7 @@ import numpy as np
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
+from mne import EvokedArray
 
 from EE385VMatFile import EE385VMatFile
 from Feature import STFTFeature
@@ -85,6 +86,24 @@ class EEG:
                 trigger = self.__gdf.get_data(picks=channels)
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
+
+    def topoplot(self, grand_avg=np.ndarray, times=times):
+        x = grand_avg
+
+        packaged_eegs = []
+        s1020 = mne.channels.make_standard_montage('standard_1020')
+        fig, ax = plt.subplots(grand_avg.shape[1])
+        for i in range(grand_avg.shape[1]):
+            eeg = EvokedArray(grand_avg[:, i, :].squeeze(), self.__eeg.info)
+            empty_room_proj = eeg.info['projs']
+            inf = self.__eeg.info
+            eeg.set_montage(s1020)
+            f = eeg.plot_topomap(axes=ax[i])
+            packaged_eegs.append(eeg)
+        fig.show()
+        x = 0
+
+
 
     def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False,
                      plot_trigger=0):
