@@ -87,19 +87,22 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
-    def topoplot(self, grand_avg=np.ndarray, times=times):
+    def topoplot(self, grand_avg=np.ndarray, times=np.ndarray):
         x = grand_avg
 
-        packaged_eegs = []
+        # Find 0 to .5 a second
+        filtered_times = np.where((times >= 0) & (times <= .5))[0]
+        filtered_times = filtered_times[0::2]
+        subset = grand_avg[:, :, filtered_times]
+        sub_times = times[filtered_times]
+
         s1020 = mne.channels.make_standard_montage('standard_1020')
-        fig, ax = plt.subplots(grand_avg.shape[1])
+        fig, ax = plt.subplots(grand_avg.shape[1], sub_times.shape[0])
         for i in range(grand_avg.shape[1]):
-            eeg = EvokedArray(grand_avg[:, i, :].squeeze(), self.__eeg.info)
-            empty_room_proj = eeg.info['projs']
-            inf = self.__eeg.info
+            sub_set = subset[:, i, :].squeeze()
+            eeg = EvokedArray(sub_set, self.__eeg.info)
             eeg.set_montage(s1020)
-            f = eeg.plot_topomap(axes=ax[i])
-            packaged_eegs.append(eeg)
+            f = eeg.plot_topomap(axes=ax[i, :])
         fig.show()
         x = 0
 

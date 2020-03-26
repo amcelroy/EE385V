@@ -36,7 +36,7 @@ channel_names_spellers = {
 parser = ConfigParser()
 parser.read('config.ini')
 
-root = parser['INFO']['root']
+root = parser['DATA']['root']
 
 dsl = DatasetLoader(root)
 
@@ -160,7 +160,7 @@ for subject in offline_dict.keys():
     stftfeature.addTitle(grand_avg_axis[..., 2], title='MSE of Error / No Error')
     grand_avg_fig.suptitle('Grand Average for Error, No Error, MSE - {}'.format(subject))
 
-    e.topoplot(grand_grand_avg_error)
+    e.topoplot(grand_grand_avg_error, times=time)
 
     # plt.show()
     grand_avg_fig.set_size_inches((25, 18), forward=False)
