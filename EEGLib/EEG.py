@@ -91,18 +91,30 @@ class EEG:
         x = grand_avg
 
         # Find 0 to .5 a second
-        filtered_times = np.where((times >= 0) & (times <= .5))[0]
-        filtered_times = filtered_times[0::2]
-        subset = grand_avg[:, :, filtered_times]
+        filtered_times = np.where((times >= 0) & (times <= .75))[0]
+        filtered_times = filtered_times[0::3]
+        subset = x[:, :, filtered_times]
         sub_times = times[filtered_times]
 
         s1020 = mne.channels.make_standard_montage('standard_1020')
-        fig, ax = plt.subplots(grand_avg.shape[1], sub_times.shape[0])
-        for i in range(grand_avg.shape[1]):
+        fig, ax = plt.subplots(x.shape[1], sub_times.shape[0])
+        for i in range(x.shape[1]):
             sub_set = subset[:, i, :].squeeze()
             eeg = EvokedArray(sub_set, self.__eeg.info)
+            eeg.times = sub_times
             eeg.set_montage(s1020)
-            f = eeg.plot_topomap(axes=ax[i, :])
+            eeg.plot_topomap(axes=ax[i, :],
+                             times=sub_times,
+                             show=False,
+                             scalings=dict(eeg=1, grad=1e13, mag=1e15),
+                             time_unit='s',
+                             units='ΔMSE',
+                             )
+
+        ax[0, sub_times.shape[0] - 1].set_ylabel('4Hz')
+        ax[0, sub_times.shape[0] - 1].yaxis.set_label_position("right")
+        ax[0, sub_times.shape[0] - 1].yaxis.set_visible(True)
+
         fig.show()
         x = 0
 
