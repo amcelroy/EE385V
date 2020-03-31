@@ -40,7 +40,7 @@ root = parser['DATA']['root']
 
 dsl = DatasetLoader(root)
 
-offline_dict = dsl.getOffline()
+offline_dict = dsl.getAll()
 
 grand_avg_error_array = []
 grand_avg_no_error_array = []
@@ -58,27 +58,32 @@ def applyFeature(triggerSplitVolume=np.ndarray, feature=BCIFeature, window=64, o
                                                                             overlap=overlap,
                                                                             pre_trigger_time=.5,
                                                                             fs=512,
-                                                                            frequency_range=[2, 10])
+                                                                            frequency_range=[4, 9])
         return feature_vol, grand_avg, grand_var, freq, time
     else:
         feature_vol, grand_avg, grand_var = feature.extract(error, window, overlap)
 
     return feature_vol, grand_avg, grand_var
 
-trials = ['Offline', 'S2', 'S3']
+subject_list = []
+for subject in offline_dict.keys():
+    subject_list.append(subject)
 
-for trial in trials:
+trial_list = ['Offline', 'S2', 'S3']
+
+for trial in trial_list:
 
     topoplot_data = []
 
-    for subject in offline_dict.keys():
-        runs = offline_dict[subject]
+    for subject in subject_list:
+
+        runs = offline_dict[subject][trial]
 
         grand_avg_fig, grand_avg_axis = plt.subplots(len(channel_names_spellers), 3)
 
         count = 0
         for run in runs:
-            path = os.path.join(root, subject, 'Offline', run)
+            path = os.path.join(root, subject, trial, run)
             e = EEG()
             (eeg, trig, mat) = e.open(
                 path,
@@ -161,7 +166,7 @@ for trial in trials:
         corr = np.array(corr)
         stftfeature.plot(grand_avg_axis[..., 2], corr, zero_time=zero_time)
         stftfeature.addXLabels(grand_avg_axis[..., 2], time=time)
-        stftfeature.addFreqLabels(grand_avg_axis[..., 2], tick_labels=[2, 3, 4, 5, 6, 7, 8, 9, 10])
+        stftfeature.addFreqLabels(grand_avg_axis[..., 2], tick_labels=[4, 5, 6, 7, 8])
         stftfeature.addTitle(grand_avg_axis[..., 2], title='MSE of Error / No Error')
         grand_avg_fig.suptitle('Grand Average for Error, No Error, MSE - {}, Trial - {}'.format(subject, trial))
 

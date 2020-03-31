@@ -31,3 +31,6 @@ class DatasetLoader:
                 if trials == 'Offline':
                     offline[subject] = data[subject][trials]
         return offline
+
+    def getAll(self):
+        return self.__subject_dict
