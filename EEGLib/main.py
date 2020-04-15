@@ -40,7 +40,7 @@ root = parser['DATA']['root']
 
 dsl = DatasetLoader(root)
 
-offline_dict = dsl.getOffline()
+offline_dict = dsl.getAll()
 
 grand_avg_error_array = []
 grand_avg_no_error_array = []
@@ -65,7 +65,7 @@ def applyFeature(triggerSplitVolume=np.ndarray, feature=BCIFeature, window=64, o
 
     return feature_vol, grand_avg, grand_var
 
-
+subject_list = []
 for subject in offline_dict.keys():
     runs = offline_dict[subject]
 
