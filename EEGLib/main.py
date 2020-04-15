@@ -163,11 +163,13 @@ for subject in offline_dict.keys():
     corr = (corr - corr.min()) / (
             corr.max() - corr.min())
     corr -= .5
-    e.topoplot(corr, times=time)
+    figure = e.topoplot(corr, times=time)
+    figure.set_size_inches((25, 18), forward=False)
+    plt.savefig('topoplot_{}.png'.format(subject), dpi=100)
 
     # plt.show()
-    grand_avg_fig.set_size_inches((25, 18), forward=False)
-    plt.savefig('grand_avg_{}.png'.format(subject), dpi=100)
+    #grand_avg_fig.set_size_inches((25, 18), forward=False)
+    #plt.savefig('grand_avg_{}.png'.format(subject), dpi=100)
 
     # fig_corr, ax_corr = plt.subplots(len(channel_names_spellers), len(offline_dict.keys()) - 1)
     # for x in range(0, len(grand_avg_error_array) - 1):

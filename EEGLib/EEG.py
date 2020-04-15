@@ -114,14 +114,12 @@ class EEG:
         ax[0, sub_times.shape[0] - 1].set_ylabel('4Hz')
         ax[0, sub_times.shape[0] - 1].yaxis.set_label_position("right")
         ax[0, sub_times.shape[0] - 1].yaxis.set_visible(True)
-
-        fig.show()
-        x = 0
+        return fig
 
 
 
     def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False,
-                     plot_trigger=0):
+                     plot_trigger=0, channels=None):
         '''
 
         :param pretime: Pre Trigger time in seconds. i.e. 2 -> T - 2s
@@ -132,6 +130,7 @@ class EEG:
         :param offset_value: Value, in microvolts, to add to each channel, used for visualization
         :param offset: Adds a 30uV offset to each EEG channel, easier for visualization, default is False
         :param plot_trigger: Selects the trigger event to display, 0 by default
+        :param channels: Which channels to extract
         :return: Numpy array of (Trigger Event, EEG Channels, Samples)
         '''
 
@@ -139,6 +138,9 @@ class EEG:
             gdf_use = self.__gdf
         else:
             gdf_use = gdf
+
+        if channels:
+            gdf_use.pick_channels(channels)
 
         pretime_s = self.timeToSample(pretime) * -1
         posttime_s = self.timeToSample(posttime)
