@@ -161,7 +161,7 @@ model = snet.compile()
 class ErrorNoErrorCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
-        x = model.evaluate(no_error_master, no_error_master, verbose=2)
+        x = model.evaluate(no_error_master_offline, no_error_master_offline, verbose=2)
         y = model.evaluate(val_set, val_set, verbose=2)
         print('No Error Loss: {}, Error Loss: {}'.format(x, y))
         print('Percent Diff: {}'.format(100*(abs(y - x) / y)))
