@@ -1,6 +1,7 @@
 import os
 from configparser import ConfigParser
 import numpy as np
+from keras.callbacks import Callback
 from scipy.stats import zscore
 
 import stftNet
@@ -116,13 +117,15 @@ else:
     no_error_master = np.load('offline_no_error.npy')
 
 error_master = error_master[..., 1:]
-error_master = np.expand_dims(error_master, 4)
+error_master = np.swapaxes(error_master, 2, 3)
+error_master = np.swapaxes(error_master, 1, 3)
 
 no_error_master = no_error_master[..., 1:]
-no_error_master = np.expand_dims(no_error_master, 4)
+no_error_master = np.swapaxes(no_error_master, 2, 3)
+no_error_master = np.swapaxes(no_error_master, 1, 3)
 
-error_master = zscore(error_master)
-no_error_master = zscore(no_error_master)
+error_master *= 10e6 #zscore(error_master)
+no_error_master *= 10e6 #zscore(no_error_master)
 
 # Split the error data into 80/20 test/train
 indecies = np.arange(error_master.shape[0])
@@ -138,12 +141,21 @@ snet = stftNet.STFTNet()
 snet.init(train_set.shape[1:])
 model = snet.compile()
 
+class ErrorNoErrorCallback(Callback):
+
+    def on_epoch_end(self, epoch, logs=None):
+        x = model.evaluate(no_error_master, no_error_master, verbose=2)
+        y = model.evaluate(val_set, val_set, verbose=2)
+        print('No Error Loss: {}, Error Loss: {}'.format(x, y))
+        print('Percent Diff: {}'.format(100*(abs(y - x) / y)))
+
+
 model.fit(train_set, train_set,
-          batch_size=32,
+          batch_size=8,
           epochs=1000,
           verbose=2,
           shuffle=True,
-          validation_data=(no_error_master, no_error_master),
+          callbacks=[ErrorNoErrorCallback()],
           )
 
 x = 0
