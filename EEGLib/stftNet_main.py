@@ -151,7 +151,7 @@ class ErrorNoErrorCallback(Callback):
 
 
 model.fit(train_set, train_set,
-          batch_size=8,
+          batch_size=128,
           epochs=1000,
           verbose=2,
           shuffle=True,

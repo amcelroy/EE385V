@@ -15,7 +15,7 @@ class STFTNet:
             kernel_size=(3, 3),
             padding='same')(input)
         conv = ReLU()(conv)
-        conv = Dropout(.2)(conv)
+        conv = Dropout(.5)(conv)
         down_sample = MaxPooling2D(pool_size=(1, 2), strides=(1, 2))(conv)
         return down_sample
 
@@ -26,7 +26,7 @@ class STFTNet:
             kernel_size=(3, 3),
             padding='same')(up_sample)
         conv = ReLU()(conv)
-        conv = Dropout(.2)(conv)
+        conv = Dropout(.5)(conv)
         return conv
 
     def init(self, input_shape=(1, 2, 3)):
