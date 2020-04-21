@@ -3,28 +3,11 @@ import numpy as np
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
+from mne import EvokedArray
 
-from EEGLib.EE385VMatFile import EE385VMatFile
-from EEGLib.Feature.STFTFeature import STFTFeature
-
-channel_names_spellers = {
-    'eeg:1': 'Fz',
-    'eeg:2': 'FC3',
-    'eeg:3': 'FC1',
-    'eeg:4': 'FCz',
-    'eeg:5': 'FC2',
-    'eeg:6': 'FC4',
-    'eeg:7': 'C3',
-    'eeg:8': 'C1',
-    'eeg:9': 'Cz',
-    'eeg:10': 'C2',
-    'eeg:11': 'C4',
-    'eeg:12': 'CP3',
-    'eeg:13': 'CP1',
-    'eeg:14': 'CPz',
-    'eeg:15': 'CP2',
-    'eeg:16': 'CP4'
-}
+from EE385VMatFile import EE385VMatFile
+from Feature import STFTFeature
+from Feature.BCIFeature import BCIFeature
 
 
 class EEG:
@@ -104,8 +87,37 @@ class EEG:
                 data_no_trigger = self.__gdf.drop_channels(channels)
                 return (data_no_trigger, trigger)
 
+    def topoplot(self, grand_avg=np.ndarray, times=np.ndarray):
+        x = grand_avg
+
+        # Find 0 to .5 a second
+        filtered_times = np.where((times >= 0) & (times <= .75))[0]
+        filtered_times = filtered_times[0::3]
+        subset = x[..., filtered_times]
+        sub_times = times[filtered_times]
+
+        s1020 = mne.channels.make_standard_montage('standard_1020')
+        fig, ax = plt.subplots(subset.shape[0], subset.shape[2])
+        for i in range(subset.shape[0]):
+            eeg = EvokedArray(subset[i].squeeze(), self.__eeg.info)
+            eeg.times = sub_times
+            eeg.set_montage(s1020)
+            eeg.plot_topomap(axes=ax[i, :],
+                             times=sub_times,
+                             show=False,
+                             scalings=dict(eeg=1, grad=1e13, mag=1e15),
+                             time_unit='s',
+                             units='ΔMSE',
+                             )
+        ax[0, sub_times.shape[0] - 1].set_ylabel('4Hz')
+        ax[0, sub_times.shape[0] - 1].yaxis.set_label_position("right")
+        ax[0, sub_times.shape[0] - 1].yaxis.set_visible(True)
+        return fig
+
+
+
     def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False,
-                     plot_trigger=0):
+                     plot_trigger=0, channels=None):
         '''
 
         :param pretime: Pre Trigger time in seconds. i.e. 2 -> T - 2s
@@ -116,6 +128,7 @@ class EEG:
         :param offset_value: Value, in microvolts, to add to each channel, used for visualization
         :param offset: Adds a 30uV offset to each EEG channel, easier for visualization, default is False
         :param plot_trigger: Selects the trigger event to display, 0 by default
+        :param channels: Which channels to extract
         :return: Numpy array of (Trigger Event, EEG Channels, Samples)
         '''
 
@@ -123,6 +136,9 @@ class EEG:
             gdf_use = self.__gdf
         else:
             gdf_use = gdf
+
+        if channels:
+            gdf_use.pick_channels(channels)
 
         pretime_s = self.timeToSample(pretime) * -1
         posttime_s = self.timeToSample(posttime)
@@ -216,7 +232,7 @@ class EEG:
         return self.__gdf.filter(l_freq=8, h_freq=12)
 
     def getTheta(self):
-        return self.__gdf.filter(l_freq=1, h_freq=8)
+        return self.__gdf.filter(l_freq=4, h_freq=8)
 
     def getBeta(self):
         return self.__gdf.filter(l_freq=12, h_freq=30)
@@ -265,67 +281,3 @@ class EEG:
                 error.append(False)
         total_error = np.sum(error)
         return (error, annotation_time)
-
-
-if __name__ == "__main__":
-    e = EEG()
-    (eeg, trig, mat) = e.open(
-        '/home/amcelroy/Code/EE385V/BCI Course 2020/ErrPSpeller/Subject1/Offline/ad4_raser_offline_offline_171110_170617.gdf',
-        channel_names=channel_names_spellers
-    )
-
-    theta = e.getTheta()
-
-    error = e.getEEGTrials(
-        pretime=.5,
-        posttime=1,
-        error=True,
-        plot=False,
-        gdf=theta,
-    )
-    no_error = e.getEEGTrials(pretime=.5, posttime=1, error=False, plot=False, gdf=theta)
-
-    error = e.CARFilter(error)
-    # error = e.power(error)
-    no_error = e.CARFilter(no_error)
-    # no_error = e.power(no_error)
-
-    e.printChannels()
-    # alpha = e.getAlpha()
-    # alpha.plot(decim=1)
-
-    averaged_error = np.mean(error, axis=0)
-    averaged_error = e.addOffset(averaged_error, 1e-6)
-
-    averaged_no_Error = np.mean(no_error, axis=0)
-    averaged_no_Error = e.addOffset(averaged_no_Error, 1e-6)
-
-    stftfeature = STFTFeature()
-    spectro, freq, time, grand_avg, grand_var = stftfeature.extract(error,
-                                                                    plot=True,
-                                                                    window=512,
-                                                                    overlap=468,
-                                                                    trigger_event=[20],
-                                                                    pre_trigger_time=.5,
-                                                                    fs=512,
-                                                                    frequency_range=[3, 8],
-                                                                    channel_names=e.getChannelNames())
-
-    plt.imshow(grand_var[9])
-    plt.show()
-
-    fig, ax = plt.subplots(1, 2)
-
-    ax[0].plot(averaged_error.T)
-    ax[0].set_title('Grand Average With Error')
-    ax[1].plot(averaged_no_Error.T)
-    ax[1].set_title('Grand Average With No Error')
-    plt.show()
-
-    theta = e.getTheta()
-    theta.plot(decim=1)
-    # gdf.printChannels()
-    channels = e.getRawEEG()
-    mat.targetLetter()
-    mat.ringBuffer()
-    # print(gdf.info)

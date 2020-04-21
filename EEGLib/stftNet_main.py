@@ -1,4 +1,3 @@
-
 import os
 from configparser import ConfigParser
 import numpy as np

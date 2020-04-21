@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 from celluloid import Camera
 from scipy.signal import stft
 
-from EEGLib.Feature.BCIFeature import BCIFeature
+from Feature.BCIFeature import BCIFeature
 
 
 class STFTFeature(BCIFeature):
 
     def extract(self, eegVolume=np.ndarray, window=64, overlap=48, plot=False, trigger_event=[0],
-             fs=512, pre_trigger_time=0, save_plot_filename='', frequency_range=None, channel_names=None):
+                fs=512, pre_trigger_time=0, save_plot_filename='', frequency_range=None, channel_names=None):
         '''
         Wraps Scipy STFT and applies it to an EEG Volume
 
@@ -74,4 +74,38 @@ class STFTFeature(BCIFeature):
             if save_plot_filename != '':
                 plt.savefig(save_plot_filename)
 
-        return data, freq, time, grand_avg, grand_var
+        return data, grand_avg, grand_var, freq, time
+
+    def plot(self, ax=plt.Axes, data=np.ndarray, zero_time=48):
+        for x in range(data.shape[0]):
+            ax[x].imshow(data[x], aspect='auto')
+            ax[x].xaxis.set_visible(False)
+            ax[x].yaxis.set_visible(False)
+            p1 = [zero_time, 0]
+            p2 = [zero_time, data.shape[1] - 1]
+            ax[x].plot([p1[0], p2[0]], [p1[1], p2[1]], 'k-')
+
+    def addYLabels(self, ax=plt.Axes, channels=['']):
+        for x in range(len(channels)):
+            ax[x].set_ylabel(channels[x])
+            ax[x].set_yticklabels([])
+            ax[x].yaxis.set_visible(True)
+
+    def addFreqLabels(self, ax=plt.Axes, tick_labels=['']):
+        for x in range(ax.shape[0]):
+            ax[x].set_yticks(np.arange(len(tick_labels)))
+            ax[x].set_yticklabels(tick_labels)
+            ax[x].set_ylabel('Hz')
+            ax[x].yaxis.set_visible(True)
+            ax[x].yaxis.tick_right()
+            ax[x].yaxis.set_label_position("right")
+
+    def addXLabels(self, ax=plt.Axes, time=[]):
+        time_label = ['{:.2f}'.format(x) for x in time]
+        ax[ax.shape[0] - 1].xaxis.set_visible(True)
+        ax[ax.shape[0] - 1].set_xticks(np.arange(len(time_label)))
+        ax[ax.shape[0] - 1].set_xticklabels(time_label, rotation=90)
+        ax[ax.shape[0] - 1].set_xlabel('Time in seconds')
+
+    def addTitle(self, ax=plt.Axes, title=''):
+        ax[0].set_title(title)

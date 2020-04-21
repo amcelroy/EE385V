@@ -22,15 +22,6 @@ class DatasetLoader:
         self.__subject_dict = data
         return data
 
-#    def getOffline(self):
-#        data = self.__subject_dict
-#        offline = {}
-#        for subject in data.keys():
-#            offline[subject] = []
-#            for trials in data[subject].keys():
-#                if trials == 'Offline':
-#                    offline[subject] = data[subject][trials]
-#        return offline
     def getTrials(self):
         data = self.__subject_dict
         offline = {}
@@ -46,6 +37,6 @@ class DatasetLoader:
                 else:
                     S3[subject] = data[subject][trials]
         return offline, S2, S3
-    
+
     def getAll(self):
         return self.__subject_dict
