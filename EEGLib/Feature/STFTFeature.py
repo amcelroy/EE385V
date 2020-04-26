@@ -28,53 +28,53 @@ class STFTFeature(BCIFeature):
         super().extract(window)
         freq, time, data = stft(eegVolume, fs=fs, nperseg=window, noverlap=overlap, axis=-1)
         data = np.abs(data)
-        data = data[:, :, :16, :]
+        data = data[:, :16, :]
 
         if frequency_range:
-            data = data[:, :, frequency_range[0]:frequency_range[1], :]
+            data = data[:, frequency_range[0]:frequency_range[1], :]
 
         time -= pre_trigger_time
 
-        grand_avg = np.mean(data, axis=0)
-        grand_var = np.var(data, axis=0)
+        # grand_avg = np.mean(data, axis=-1)
+        # grand_var = np.var(data, axis=-1)
+        #
+        # if plot:
+        #     fig, ax = plt.subplots(16, 2, figsize=(20, 10))
+        #     camera = Camera(fig)
+        #     for t in trigger_event:
+        #         time_label = ['{:.2f}'.format(x) for x in time]
+        #         slice = data[t, ...]
+        #
+        #         for x, y in np.ndindex(ax.shape):
+        #             if y == 0:
+        #                 ax[x, y].imshow(slice[x], aspect="auto")
+        #             elif y == 1:
+        #                 ax[x, y].imshow(grand_avg[x], aspect='auto')
+        #
+        #             if channel_names:
+        #                 ax[x, y].xaxis.set_visible(False)
+        #                 ax[x, 0].yaxis.set_visible(True)
+        #                 ax[x, 0].set_ylabel(channel_names[x])
+        #                 ax[x, 0].set_yticks([])
+        #                 ax[x, 1].set_yticks([])
+        #             else:
+        #                 ax[x, y].xaxis.set_visible(False)
+        #                 ax[x, y].yaxis.set_visible(False)
+        #         ax[x, 0].xaxis.set_visible(True)
+        #         ax[x, 0].set_xticks(np.arange(len(time_label)))
+        #         ax[x, 0].set_xticklabels(time_label, rotation=60)
+        #         ax[x, 1].xaxis.set_visible(True)
+        #         ax[x, 1].set_xticks(np.arange(len(time_label)))
+        #         ax[x, 1].set_xticklabels(time_label, rotation=60)
+        #         camera.snap()
+        #
+        #     animation = camera.animate()
+        #     fig.show()
+        #
+        #     if save_plot_filename != '':
+        #         plt.savefig(save_plot_filename)
 
-        if plot:
-            fig, ax = plt.subplots(16, 2, figsize=(20, 10))
-            camera = Camera(fig)
-            for t in trigger_event:
-                time_label = ['{:.2f}'.format(x) for x in time]
-                slice = data[t, ...]
-
-                for x, y in np.ndindex(ax.shape):
-                    if y == 0:
-                        ax[x, y].imshow(slice[x], aspect="auto")
-                    elif y == 1:
-                        ax[x, y].imshow(grand_avg[x], aspect='auto')
-
-                    if channel_names:
-                        ax[x, y].xaxis.set_visible(False)
-                        ax[x, 0].yaxis.set_visible(True)
-                        ax[x, 0].set_ylabel(channel_names[x])
-                        ax[x, 0].set_yticks([])
-                        ax[x, 1].set_yticks([])
-                    else:
-                        ax[x, y].xaxis.set_visible(False)
-                        ax[x, y].yaxis.set_visible(False)
-                ax[x, 0].xaxis.set_visible(True)
-                ax[x, 0].set_xticks(np.arange(len(time_label)))
-                ax[x, 0].set_xticklabels(time_label, rotation=60)
-                ax[x, 1].xaxis.set_visible(True)
-                ax[x, 1].set_xticks(np.arange(len(time_label)))
-                ax[x, 1].set_xticklabels(time_label, rotation=60)
-                camera.snap()
-
-            animation = camera.animate()
-            fig.show()
-
-            if save_plot_filename != '':
-                plt.savefig(save_plot_filename)
-
-        return data, grand_avg, grand_var, freq, time
+        return data, freq, time
 
     def plot(self, ax=plt.Axes, data=np.ndarray, zero_time=48):
         for x in range(data.shape[0]):

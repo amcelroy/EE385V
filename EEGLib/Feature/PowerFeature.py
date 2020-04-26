@@ -15,7 +15,7 @@ class PowerFeature(BCIFeature):
 
         dt = window - overlap
         power_array = []
-        for x in range(0, power.shape[2], dt):
+        for x in range(0, power.shape[-1], dt):
             sub = power[..., x:(x + window)]
             sub = np.mean(sub, axis=-1)
             power_array.append(sub)

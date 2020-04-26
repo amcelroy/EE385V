@@ -10,6 +10,7 @@ from EEG import EEG
 import matplotlib.pyplot as plt
 
 from Feature.NormalFeature import NormalFeature
+from Feature.PowerFeature import PowerFeature
 from Feature.STFTFeature import STFTFeature
 from powerNet import PowerNet
 
@@ -72,39 +73,19 @@ def trials(trial_name=''):
                     channel_names=channel_names_spellers
                 )
 
-                # theta = e.getTheta()
+                #theta = e.getTheta()
                 theta = e.getRawEEG(channels=channels_of_interest)[0]
                 theta = e.CARFilter(theta)
 
-                # error = e.getEEGTrials(
-                #     pretime=0,
-                #     posttime=1,
-                #     error=True,
-                #     plot=False,
-                #     gdf=theta,
-                #     channels=channels_of_interest,
-                # )
-                #
-                # no_error = e.getEEGTrials(
-                #     pretime=0,
-                #     posttime=1,
-                #     error=False,
-                #     plot=False,
-                #     gdf=theta,
-                #     channels=channels_of_interest,
-                # )
+                powerFeature = PowerFeature()
+                theta, grand_avg, gran_var = powerFeature.extract(theta,
+                                            window=32,
+                                            overlap=16
+                                            )
+                # theta = np.expand_dims(theta, axis=1)
+                error = e.splitNDArray(theta, 0, 1, True, fs=512, downsample=16)
+                no_error = e.splitNDArray(theta, 0, 1, False, fs=512, downsample=16)
 
-                stftfeature = STFTFeature()
-                stft, freq, time = stftfeature.extract(theta,
-                                                       window=512,
-                                                       overlap=496,
-                                                       pre_trigger_time=0,
-                                                       fs=512,
-                                                       frequency_range=[3, 9]
-                                                       )
-
-                error = e.splitNDArray(stft, 0, 1, True, fs=512, downsample=(512 - 496))
-                no_error = e.splitNDArray(stft, 0, 1, False, fs=512, downsample=(512 - 496))
 
                 if error_master == []:
                     error_master = error
@@ -120,19 +101,16 @@ def trials(trial_name=''):
         error_master = np.load(f'{trial_name}_error.npy')
         no_error_master = np.load(f'{trial_name}_no_error.npy')
 
-    # error_master = error_master[..., 1:]
-    error_master = np.swapaxes(error_master, 2, 3)
-    error_master = np.swapaxes(error_master, 1, 3)
+    #error_master = error_master[..., 1:]
+    error_master = np.swapaxes(error_master, 1, 2)
 
-    # no_error_master = no_error_master[..., 1:]
-    no_error_master = np.swapaxes(no_error_master, 2, 3)
-    no_error_master = np.swapaxes(no_error_master, 1, 3)
+    #no_error_master = no_error_master[..., 1:]
+    no_error_master = np.swapaxes(no_error_master, 1, 2)
 
     error_master *= 10e6  # zscore(error_master)
     no_error_master *= 10e6  # zscore(no_error_master)
 
     return error_master, no_error_master
-
 
 error_master_offline, no_error_master_offline = trials('Offline')
 error_master_S2, no_error_master_S2 = trials('S2')
@@ -143,6 +121,7 @@ truth_offline = np.concatenate([np.ones(error_master_offline.shape[0]), np.zeros
 truth_offline = np.expand_dims(truth_offline, 1)
 truth_offline = np.concatenate([truth_offline, 1 - truth_offline], 1)
 class_balanace_offline = error_master_offline.shape[0] / no_error_master_offline.shape[0]
+
 
 S2 = np.concatenate([error_master_S2, no_error_master_S2])
 truth_S2 = np.concatenate([np.ones(error_master_S2.shape[0]), np.zeros(no_error_master_S2.shape[0])])
@@ -156,9 +135,16 @@ truth_S3 = np.expand_dims(truth_S3, 1)
 truth_S3 = np.concatenate([truth_S3, 1 - truth_S3], 1)
 class_balanace_S3 = error_master_S3.shape[0] / no_error_master_S3.shape[0]
 
-snet = stftNet.STFTNet()
-snet.init(error_master_offline.shape[1:])
-model = snet.compile()
+error_master_offline = np.squeeze(error_master_offline)
+no_error_master_offline = np.squeeze(no_error_master_offline)
+error_master_S2 = np.squeeze(error_master_S2)
+no_error_master_S2 = np.squeeze(no_error_master_S2)
+error_master_S3 = np.squeeze(error_master_S3)
+no_error_master_S3 = np.squeeze(no_error_master_S3)
+
+net = PowerNet()
+net.init(error_master_offline.shape[1:])
+model = net.compile()
 
 errors = {
     'Offline': {
@@ -185,7 +171,7 @@ class ErrorNoErrorCallback(Callback):
 
 
 model.fit(offline, truth_offline,
-          batch_size=64,
+          batch_size=16,
           epochs=1000,
           verbose=2,
           shuffle=True,
@@ -194,7 +180,7 @@ model.fit(offline, truth_offline,
           )
 
 # model.fit(np.concatenate([offline, S2]), np.concatenate([truth_offline, truth_S2]),
-#           batch_size=64,
+#           batch_size=16,
 #           epochs=1000,
 #           verbose=2,
 #           shuffle=True,

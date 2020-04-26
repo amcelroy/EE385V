@@ -114,7 +114,35 @@ class EEG:
         ax[0, sub_times.shape[0] - 1].yaxis.set_visible(True)
         return fig
 
+    def splitNDArray(self, array, pretime=2, posttime=4, error=True, fs=512, downsample=(512 - 511)):
+        pretime_s = self.timeToSample(pretime) * -1
+        posttime_s = self.timeToSample(posttime)
 
+        error_array, time = self.identifyErrors()
+
+        time_no_down = self.timeArrayToSampleArray(time, fs)
+        time = self.timeArrayToSampleArray(time, fs) / downsample
+        time = time.astype(np.int)
+
+
+        gdf_array = None
+
+        for x in range(time.shape[0]):
+            e = error_array[x]
+            if e is not np.NaN:
+                if e == error:
+                    t = time[x]
+                    start = int(t + pretime_s/downsample)
+                    stop = int(t + posttime_s/downsample)
+                    gdf_subset = array[..., start:stop]
+
+                    if gdf_subset.shape[-1] == (pretime_s * -1 / downsample + posttime_s / downsample):
+                        if gdf_array is None:
+                            gdf_array = np.expand_dims(gdf_subset, 0)
+                        else:
+                            gdf_subset = np.expand_dims(gdf_subset, 0)
+                            gdf_array = np.append(gdf_array, gdf_subset, axis=0)
+        return gdf_array
 
     def getEEGTrials(self, pretime=2, posttime=4, error=True, gdf=mne.io.Raw, offset=False, offset_value=30, plot=False,
                      plot_trigger=0, channels=None):
@@ -186,10 +214,10 @@ class EEG:
         '''
         filtered = np.zeros(eegVolume.shape)
         for trigger in range(eegVolume.shape[0]):
-            eeg_slice = eegVolume[trigger, :, :]
+            eeg_slice = eegVolume[trigger, ...]
             global_avg = np.mean(eeg_slice, axis=0)
             eeg_slice -= global_avg
-            filtered[trigger, :, :] = eeg_slice
+            filtered[trigger, ...] = eeg_slice
 
         return filtered
 
